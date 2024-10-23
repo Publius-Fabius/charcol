@@ -1,61 +1,83 @@
+#ifndef CHARCOL_CHAT_H
+#define CHARCOL_CHAT_H
 
 #include <stddef.h>
+#include <stdint.h>
+#include <pthread.h>
 
-struct avl_tree;
+#ifndef CHC_CHAT_BUF_MAX
+#define CHC_CHAT_BUF_MAX 16
+#endif
 
-struct chc_user {
-        char *id;
-        char *name;
+#ifndef CHC_CHAT_MSG_MAX
+#define CHC_CHAT_MSG_MAX 248
+#endif
+
+/** Chat Message */
+struct chc_chat_msg {
+        char content[CHC_CHAT_MSG_MAX];
+        size_t length;
 };
 
-struct chc_users {
-        struct chc_user **array;
-        size_t capacity;
+/** Chat Ring Buffer */
+struct chc_chat_buf {
+        struct chc_chat_msg messages[CHC_CHAT_BUF_MAX];
+        size_t first;
+        size_t size;
+        pthread_mutex_t mutex;
+};
+
+/** Chat User */
+struct chc_chat_user {
+        uint64_t uid;
+        double rate;
+        struct chc_chat_buf *buffer;
+};
+
+/** User Linked List Node */
+struct chc_chat_unode {
+        struct chc_chat_user *user;
+        struct chc_chat_unode *next;
+};
+
+/** User Linked List */
+struct chc_chat_ulist {
+        struct chc_chat_unode *first, *last;
         size_t size;
 };
 
-struct chc_room {
-        struct chc_users *users;
+/** Chat Room */
+struct chc_chat_room {
+        struct chc_chat_ulist *users;
 };
 
-struct chc_rooms {
-        struct chc_room **array;
-        size_t capacity;
-        size_t size;
+/** Chat Configuration */
+struct chc_chat_cfg {
+        float max_rate;
 };
 
-struct chc_complex {
-        struct chc_rooms *rooms;
-        struct avl_tree *users;
-};
+/** Chat Context */
+struct chc_chat_ctx;
 
-struct chc_message {
-        struct chc_user *author;
-        char *content;
-};
+/** Create a new chat context. */
+struct chc_chat_ctx *chc_chat_create_ctx(
+        struct chc_chat_cfg *cfg);
 
-#define CHC_BUFFER_MAX 32
+/** Get room by uid. */
+struct chc_chat_room *chc_chat_get_room(
+        struct chc_chat_ctx *ctx, 
+        const uint64_t uid);
 
-struct chc_buffer {
-        struct chc_message *messages[CHC_BUFFER_MAX];
-};
+/** Receive messages for user. */
+int chc_chat_recv(
+        struct chc_chat_user *user,
+        struct chc_chat_msg *messages,
+        const size_t count);
 
-/** Receive messages from the chat room. */
-int chc_room_receive(
-        struct chc_room *room, 
-        struct chc_room *user,
-        struct chc_buffer *buffer);
+/** Send a message to the chat room. */
+int chc_chat_send(
+        struct chc_chat_room *room, 
+        struct chc_chat_room *user,
+        struct chc_chat_msg *message);
 
-/** Send messages to the chat room. */
-int chc_room_send(
-        struct chc_room *room, 
-        struct chc_room *user,
-        struct chc_buffer *buffer,
-        const size_t msgcount);
-
-
-
-
-
-
-
+#endif

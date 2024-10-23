@@ -1,2 +1,2 @@
-# Charcol - Collaborative Markdown Editor and Chat for the Web
+## Charcol - Collaborative Markdown Editor and Chat for the Web
 
